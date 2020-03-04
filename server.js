@@ -33,20 +33,17 @@ const db = new Database({
     database: "employeetracker"
 });
 
-async function listThumbnails(){
-    const myList = await db.query( "SELECT * FROM thumbnails ORDER BY id" );
-    return myList;
-}
+// async function listThumbnails(){
+//     const myList = await db.query( "SELECT * FROM thumbnails ORDER BY id" );
+//     return myList;
+// }
 
-async function saveThumbnail( myPost ){
-    const myResult = await db.query( 
-        "INSERT INTO thumbnails (name,image_url,tags) VALUES(?,?,?)",
-        [ myPost.name, myPost.image_url, myPost.tags ] );
-    return myResult;
-}
-
-//let myList = [];
-
+// async function saveThumbnail( myPost ){
+//     const myResult = await db.query( 
+//         "INSERT INTO thumbnails (name,image_url,tags) VALUES(?,?,?)",
+//         [ myPost.name, myPost.image_url, myPost.tags ] );
+//     return myResult;
+// }
 
 // async function selectAll(){
 //     const selectQuery = `select 
@@ -70,6 +67,10 @@ async function saveThumbnail( myPost ){
 
 // }
 
+let depList = [];
+let manList = [];
+let rolList = [];
+
 
 async function init(){
     const menu = await inquirer.prompt([
@@ -77,13 +78,18 @@ async function init(){
     ]);
 
     //console.log(menu.item);
-   
+    depList = await db.query( "SELECT * FROM department" );
+    manList = await db.query( "SELECT id, Concat(first_name, ' ', last_name) as name FROM employee");
+    rolList = await db.query( "SELECT id, title as name FROM role");
+    console.log(manList);
+    console.log(rolList);
+
     switch (menu.item) {
-        case "Add role":  
+        case "Add role":
             const inq_answers_AR = await inquirer.prompt([
                 { name: 'title', type: 'input', message: `What is the role's title ?\n`},
                 { name: 'salary', type: 'input', message: `What is the role's salary?\n` },
-                { name: 'department', type: 'input', message: `What is the role's department?\n`}
+                { name: 'department', type: 'list', choices: depList, message: `What is the role's department?\n`}
             ]);
             callMySqlDb( menu.item, inq_answers_AR ); break;
         
@@ -91,8 +97,8 @@ async function init(){
             const inq_answers_AE = await inquirer.prompt([
                 { name: 'employeefname', type: 'input', message: `What is the employee's first name ?\n`},
                 { name: 'employeelname', type: 'input', message: `What is the employee's last name?\n` },
-                { name: 'employeerole', type: 'input', message: `What is the employee's role?\n`},
-                { name: 'employeemanager', type: 'input', message: `who is employee's manager?\n`}
+                { name: 'employeerole', type: 'list', choices: rolList, message: `What is the employee's role?\n`},
+                { name: 'employeemanager', type: 'list', choices: manList, message: `who is employee's manager?\n`}
             ]);
             callMySqlDb( menu.item, inq_answers_AE ); break;
 
@@ -123,13 +129,12 @@ async function init(){
             switch (action) {
                         case "Add role": 
                                 await db.query( "INSERT INTO role (title, salary, department_id) VALUES(?,?,?)", 
-                                [ item.title, item.salary, item.department ] );break;
+                                [ item.title, item.salary, depList.find(o => o.name === item.department).id] ); break;
 
                         case "Add employee":  
                                 await db.query( "INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES(?,?,?,?)", 
-                                [ item.employeefname, item.employeelname, item.employeerole, item.employeemanager ] );break;
+                                [ item.employeefname, item.employeelname, rolList.find(o => o.name === item.employeerole).id, manList.find(o => o.name === item.employeemanager).id ] ); break;
                                 
-                
                         case "Add department" :
                                 await db.query( "INSERT INTO department(name) VALUES(?)", 
                                 [ item.name] );break;
