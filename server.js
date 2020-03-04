@@ -112,19 +112,7 @@ async function init(){
 }
 
 
-    // try{
-    //     //await writeFileAsync( "Team.html", html );
-    //     await db.query( `insert into employee(first_name, last_name, role_id, manager_id) values("Jared", "Deckar", 1,1);` );
-    //     console.log(employee);
-    //     console.log("Successfully done!");
-        
-    // } catch (err) {
-    //     console.log(err);
-    // }
-
-
     async function callMySqlDb(action, item){
-
         try{
             switch (action) {
                         case "Add role": 
@@ -149,14 +137,10 @@ async function init(){
             db.close();
         console.log("db updated!");
         }
-        
-        
-        
+
     }
 
 
 
 
 init();
-
-// convert addad be text va barax (when capture role and dep)
