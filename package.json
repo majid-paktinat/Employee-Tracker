@@ -2,11 +2,12 @@
   "name": "employee-tracker",
   "version": "1.0.0",
   "description": "",
-  "main": "server.js",
+  "main": "db.js",
   "dependencies": {
     "express": "^4.17.1",
     "inquirer": "^7.0.5",
-    "mysql": "^2.18.1"
+    "mysql": "^2.18.1",
+    "press-any-key": "^0.1.1"
   },
   "devDependencies": {},
   "scripts": {
