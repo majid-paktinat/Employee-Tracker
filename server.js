@@ -59,11 +59,13 @@ async function init(){
             
             roleCols = await findTableColumns('role'); // console.log(roleCols);
             destinationArr = util.arr_obj_To_arr(roleCols); // console.log(destinationArr);
-            choicesArr = destinationArr.filter(function checkAdult(el, index) { return (index > 0); });
+            choicesArr = destinationArr.filter(function checkAdult(el, index) { return (index > 0 && index<destinationArr.length-1); });
+            choicesArr.push("department name");
 
             const inq_answers_UR_column = await inquirer.prompt([
                 { name: 'colNameToUpdate', type: 'list', choices: choicesArr , message: `Which field do you want to update ?\n`},
-                { name: 'colValToUpdate', type: 'input', message: `Please provide value ?\n`}
+                { name: 'colValToUpdate', type: 'list', choices: await view('department', true), message: `Please select new department ?\n`, 'when': (inq_answers_UR_column) => inq_answers_UR_column.colNameToUpdate === 'department name' },
+                { name: 'colValToUpdate', type: 'input', message: `Please provide value ?\n`, 'when': (inq_answers_UR_column) => inq_answers_UR_column.colNameToUpdate !== 'department name' }
             ]);
             //console.log(inq_answers_UR_column); 
 
@@ -73,6 +75,7 @@ async function init(){
         case "* Exit *\n" : console.log("Process is ended !"); process.exit();
     }
 }
+
 
 async function addToDatabase(action, item){
     try{
@@ -105,26 +108,27 @@ async function view(entity, needReturn = false){
         case "role" : 
                 // as 'name' is needed for 'choiceArr' inside the inquirer
                 selectQuery = (needReturn) ? 
-                `select rol.title as name, rol.salary, dep.name as department from role as rol 
-                inner join department as dep on rol.department_id = dep.id` : 
-                `select rol.title, rol.salary, dep.name as department from role as rol 
-                inner join department as dep on rol.department_id = dep.id`; 
+                            `select rol.title as name, rol.salary, dep.name as department from role as rol 
+                            inner join department as dep on rol.department_id = dep.id` : 
+                            `select rol.title, rol.salary, dep.name as department from role as rol 
+                            inner join department as dep on rol.department_id = dep.id`; 
                 break;
         case "employee" : 
                 selectQuery = `select 
-                                    emp.id, emp.first_name, emp.last_name, rol.title, rol.salary, dep.name as department, CONCAT(manager.first_name, " ", manager.last_name) as manager
-                                    from employee as emp 
-                                    inner join role as rol on emp.role_id = rol.id
-                                    inner join department as dep on rol.department_id = dep.id
-                                    inner join employee as manager on manager.id = emp.manager_id`;
+                            emp.id, emp.first_name, emp.last_name, rol.title, rol.salary, dep.name as department, CONCAT(manager.first_name, " ", manager.last_name) as manager
+                            from employee as emp 
+                            inner join role as rol on emp.role_id = rol.id
+                            inner join department as dep on rol.department_id = dep.id
+                            inner join employee as manager on manager.id = emp.manager_id`;
                 break;
         case "department" : 
-                selectQuery = `select * from department`; break;                
+                selectQuery = (needReturn) ? `select name from department` : `select * from department`; 
+                break;                
     }
     async function runQuery(){
         try {
             const myList = await  dbhandler.database.query( selectQuery );
-            if (needReturn){ return myList; } else { console.table(myList); }
+            if (needReturn){ console.log(myList); return myList; } else { console.table(myList); }
         } catch( e ){ console.log( `Sorry had a problem with the database!` ); }
     }
     try{ return await runQuery();} catch(e){console.log( `Sorry had a problem with the database!` );}
@@ -133,16 +137,22 @@ async function view(entity, needReturn = false){
 
 async function updateDatabase(Record, Column){
     let selectQuery = ` UPDATE role SET ${Column.colNameToUpdate} = '${Column.colValToUpdate}' WHERE title = '${Record.titleRecToUpdate}'`;
-        async function runQuery(){
-            try {
-                const myList = await dbhandler.database.query( selectQuery );
-                return myList;
-            } catch( e ){
-                console.log( `Sorry had a problem with the database !` );
-            }
+    
+    if (Column.colNameToUpdate=='department name'){
+        myId = await dbhandler.database.query( `select id from department where name='${Column.colValToUpdate}'` ); 
+        selectQuery = `UPDATE role SET department_id = ${util.arr_obj_To_arr(myId)[0]} WHERE title = '${Record.titleRecToUpdate}'`;
+    }
+
+    async function runQuery(){
+        try {
+            const myList = await dbhandler.database.query( selectQuery );
+            return myList;
+        } catch( e ){
+            console.log( `Sorry had a problem with the database !` );
         }
-        try{ return await runQuery(); } catch(e){console.log( e );}
-        finally{ console.log("database updated!"); util.pressAnyKeyFunc(init); }
+    }
+    try{ return await runQuery(); } catch(e){console.log( e );}
+    finally{ console.log("database updated!"); util.pressAnyKeyFunc(init); }
 }
 
 async function findTableColumns(entity){
