@@ -42,20 +42,36 @@ async function init(){
         case "View department" : view('department'); break;
         
         case "Update employee" : 
+
+            choicesArr = await view('employee', true); //console.log(choicesArr);
+            const inq_answers_UE_record = await inquirer.prompt([
+                { name: 'empRecToUpdate', type: 'list', choices: choicesArr , message: `Which employee do you want to update ?\n`}
+            ]);
+            //console.log(inq_answers_UE_record);
+
             employeeCols = await findTableColumns('employee'); // console.log(employeeCols);
             destinationArr = util.arr_obj_To_arr(employeeCols); // console.log(destinationArr);
-            choicesArr = destinationArr.filter(function checkAdult(el, index) { return (index > 0); });
-            const inq_answers_UE = await inquirer.prompt([
-                { name: 'colToUpdate', type: 'list', choices: choicesArr, message: `What do you want to update ?\n`}
+            choicesArr = destinationArr.filter(function checkAdult(el, index) { return (index > 0 && index < destinationArr.length-2); });
+            choicesArr.push("role name");
+            choicesArr.push("manager name");
+
+            const inq_answers_UE_column = await inquirer.prompt([
+                { name: 'colNameToUpdate', type: 'list', choices: choicesArr , message: `Which field do you want to update ?\n`},
+                { name: 'colValToUpdate', type: 'list', choices: await view('role', true), message: `Please select new role ?\n`, 'when': (inq_answers_UE_column) => inq_answers_UE_column.colNameToUpdate === 'role name' },
+                { name: 'colValToUpdate', type: 'list', choices: await view('employee', true), message: `Please select new manager ?\n`, 'when': (inq_answers_UE_column) => inq_answers_UE_column.colNameToUpdate === 'manager name' },
+                { name: 'colValToUpdate', type: 'input', message: `Please provide value ?\n`, 'when': (inq_answers_UE_column) => (inq_answers_UE_column.colNameToUpdate !== 'role name' && inq_answers_UE_column.colNameToUpdate !== 'manager name') }
             ]);
+            //console.log(inq_answers_UE_column); 
+            updateDatabaseUE(inq_answers_UE_record, inq_answers_UE_column);
             break;
+;
+
         case "Update role" : 
-            choicesArr = await view('role', true);
-            //console.log(choicesArr);
+            choicesArr = await view('role', true); //console.log(choicesArr);
             const inq_answers_UR_record = await inquirer.prompt([
-                { name: 'titleRecToUpdate', type: 'list', choices: choicesArr , message: `What do you want to update ?\n`}
+                { name: 'roleRecToUpdate', type: 'list', choices: choicesArr , message: `Which role do you want to update ?\n`}
             ]);
-            //console.log(inq_answers_UR_record);
+            // console.log(inq_answers_UR_record);
             
             roleCols = await findTableColumns('role'); // console.log(roleCols);
             destinationArr = util.arr_obj_To_arr(roleCols); // console.log(destinationArr);
@@ -67,7 +83,7 @@ async function init(){
                 { name: 'colValToUpdate', type: 'list', choices: await view('department', true), message: `Please select new department ?\n`, 'when': (inq_answers_UR_column) => inq_answers_UR_column.colNameToUpdate === 'department name' },
                 { name: 'colValToUpdate', type: 'input', message: `Please provide value ?\n`, 'when': (inq_answers_UR_column) => inq_answers_UR_column.colNameToUpdate !== 'department name' }
             ]);
-            //console.log(inq_answers_UR_column); 
+            // console.log(inq_answers_UR_column); 
 
             updateDatabase(inq_answers_UR_record, inq_answers_UR_column);
             break;
@@ -91,15 +107,11 @@ async function addToDatabase(action, item){
                     case "Add department" :
                             await dbhandler.database.query( "INSERT INTO department(name) VALUES(?)", 
                             [ item.name] );break;
-                            
 
                 }
     }
-    catch(err){ console.log(err);}
-    finally{
-        console.log("database updated!");
-        util.pressAnyKeyFunc(init);
-    }
+    catch(err){ console.log(err); }
+    finally{ console.log("database updated!"); util.pressAnyKeyFunc(init); }
 }
 
 async function view(entity, needReturn = false){
@@ -114,10 +126,12 @@ async function view(entity, needReturn = false){
                             inner join department as dep on rol.department_id = dep.id`; 
                 break;
         case "employee" : 
-                selectQuery = `select 
+                selectQuery = (needReturn) ?
+                            `select CONCAT(first_name, " ", last_name) as name from employee` : 
+                            `select 
                             emp.id, emp.first_name, emp.last_name, rol.title, rol.salary, dep.name as department, CONCAT(manager.first_name, " ", manager.last_name) as manager
                             from employee as emp 
-                            inner join role as rol on emp.role_id = rol.id
+                            left join role as rol on emp.role_id = rol.id
                             inner join department as dep on rol.department_id = dep.id
                             inner join employee as manager on manager.id = emp.manager_id`;
                 break;
@@ -128,19 +142,19 @@ async function view(entity, needReturn = false){
     async function runQuery(){
         try {
             const myList = await  dbhandler.database.query( selectQuery );
-            if (needReturn){ console.log(myList); return myList; } else { console.table(myList); }
-        } catch( e ){ console.log( `Sorry had a problem with the database!` ); }
+            if (needReturn){ return myList; } else { console.table(myList); }
+        } catch( e ){ console.log( `database had problem!` ); }
     }
-    try{ return await runQuery();} catch(e){console.log( `Sorry had a problem with the database!` );}
+    try{ return await runQuery();} catch(e){console.log( `A database problem !` );}
     finally{ if (!needReturn) util.pressAnyKeyFunc(init); }
 }
 
 async function updateDatabase(Record, Column){
-    let selectQuery = ` UPDATE role SET ${Column.colNameToUpdate} = '${Column.colValToUpdate}' WHERE title = '${Record.titleRecToUpdate}'`;
+    let selectQuery = ` UPDATE role SET ${Column.colNameToUpdate} = '${Column.colValToUpdate}' WHERE title = '${Record.roleRecToUpdate}'`;
     
     if (Column.colNameToUpdate=='department name'){
         myId = await dbhandler.database.query( `select id from department where name='${Column.colValToUpdate}'` ); 
-        selectQuery = `UPDATE role SET department_id = ${util.arr_obj_To_arr(myId)[0]} WHERE title = '${Record.titleRecToUpdate}'`;
+        selectQuery = `UPDATE role SET department_id = ${util.arr_obj_To_arr(myId)[0]} WHERE title = '${Record.roleRecToUpdate}'`;
     }
 
     async function runQuery(){
@@ -155,19 +169,48 @@ async function updateDatabase(Record, Column){
     finally{ console.log("database updated!"); util.pressAnyKeyFunc(init); }
 }
 
+
+
+async function updateDatabaseUE(Record, Column){
+/*
+    { colNameToUpdate: 'first_name', colValToUpdate: 'new name' }
+    { colNameToUpdate: 'last_name', colValToUpdate: 'new name' }
+    { colNameToUpdate: 'role name', colValToUpdate: 'Test Role' }
+    { colNameToUpdate: 'manager name', colValToUpdate: 'majid paktinat' }
+            
+*/
+
+let selectQuery = ` UPDATE employee SET ${Column.colNameToUpdate} = '${Column.colValToUpdate}' WHERE CONCAT(first_name ," ", last_name) = '${Record.empRecToUpdate}'`;
+if (Column.colNameToUpdate=='role name'){
+    myId = await dbhandler.database.query( `select id from role where title='${Column.colValToUpdate}'` ); 
+    selectQuery = `UPDATE employee SET role_id = ${util.arr_obj_To_arr(myId)[0]} WHERE CONCAT(first_name ," ", last_name) = '${Record.empRecToUpdate}'`;
+} else if (Column.colNameToUpdate=='manager name'){
+    myId = await dbhandler.database.query( `select id from employee where CONCAT(first_name ," ", last_name) = '${Column.colValToUpdate}'` ); 
+    selectQuery = `UPDATE employee SET manager_id = ${util.arr_obj_To_arr(myId)[0]} WHERE CONCAT(first_name ," ", last_name) = '${Record.empRecToUpdate}'`;
+}
+
+async function runQuery(){
+    try {
+        const myList = await dbhandler.database.query( selectQuery );
+        return myList;
+    } catch( e ){
+        console.log( `Sorry had a problem with the database !` );
+    }
+}
+try{ return await runQuery(); } catch(e){console.log( e );}
+finally{ console.log("database updated!"); util.pressAnyKeyFunc(init); }
+}
+
+
 async function findTableColumns(entity){
-let selectQuery = ` SELECT COLUMN_NAME
-                        FROM INFORMATION_SCHEMA.COLUMNS
-                        WHERE TABLE_NAME = '${entity}'`;
+let selectQuery = ` SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${entity}'`;
     async function runQuery(){
         try {
             const myList = await  dbhandler.database.query( selectQuery );
             return myList;
-        } catch( e ){
-            console.log( `Sorry had a problem with the database B!` );
-        }
+        } catch( e ){ console.log( `problem with the database !` );}
     }
-    try{ return await runQuery(); } catch(e){console.log( `Sorry had a problem with the database C!` );}
+    try{ return await runQuery(); } catch(e){console.log( `Sorry... database had a problem!` );}
 }
 
 init();
