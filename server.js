@@ -1,6 +1,6 @@
 const inquirer = require( 'inquirer' );
-const dbhandler = require( './db' );
-const pressAnyKey = require('press-any-key');
+const dbhandler = require( './lib/db' );
+const util = require( './lib/util' );
 
 let employeeCols = [];
 let roleCols = [];
@@ -43,7 +43,7 @@ async function init(){
         
         case "Update employee" : 
             employeeCols = await findTableColumns('employee'); // console.log(employeeCols);
-            destinationArr = arr_obj_To_arr(employeeCols); // console.log(destinationArr);
+            destinationArr = util.arr_obj_To_arr(employeeCols); // console.log(destinationArr);
             choicesArr = destinationArr.filter(function checkAdult(el, index) { return (index > 0); });
             const inq_answers_UE = await inquirer.prompt([
                 { name: 'colToUpdate', type: 'list', choices: choicesArr, message: `What do you want to update ?\n`}
@@ -58,7 +58,7 @@ async function init(){
             //console.log(inq_answers_UR_record);
             
             roleCols = await findTableColumns('role'); // console.log(roleCols);
-            destinationArr = arr_obj_To_arr(roleCols); // console.log(destinationArr);
+            destinationArr = util.arr_obj_To_arr(roleCols); // console.log(destinationArr);
             choicesArr = destinationArr.filter(function checkAdult(el, index) { return (index > 0); });
 
             const inq_answers_UR_column = await inquirer.prompt([
@@ -67,7 +67,7 @@ async function init(){
             ]);
             //console.log(inq_answers_UR_column); 
 
-            updateRecord(inq_answers_UR_record, inq_answers_UR_column);
+            updateDatabase(inq_answers_UR_record, inq_answers_UR_column);
             break;
 
         case "* Exit *\n" : console.log("Process is ended !"); process.exit();
@@ -95,7 +95,7 @@ async function addToDatabase(action, item){
     catch(err){ console.log(err);}
     finally{
         console.log("database updated!");
-        pressAnyKeyFunc();
+        util.pressAnyKeyFunc(init);
     }
 }
 
@@ -118,6 +118,8 @@ async function view(entity, needReturn = false){
                                     inner join department as dep on rol.department_id = dep.id
                                     inner join employee as manager on manager.id = emp.manager_id`;
                 break;
+        case "department" : 
+                selectQuery = `select * from department`; break;                
     }
     async function runQuery(){
         try {
@@ -126,10 +128,10 @@ async function view(entity, needReturn = false){
         } catch( e ){ console.log( `Sorry had a problem with the database!` ); }
     }
     try{ return await runQuery();} catch(e){console.log( `Sorry had a problem with the database!` );}
-    finally{ if (!needReturn) pressAnyKeyFunc(); }
+    finally{ if (!needReturn) util.pressAnyKeyFunc(init); }
 }
 
-async function updateRecord(Record, Column){
+async function updateDatabase(Record, Column){
     let selectQuery = ` UPDATE role SET ${Column.colNameToUpdate} = '${Column.colValToUpdate}' WHERE title = '${Record.titleRecToUpdate}'`;
         async function runQuery(){
             try {
@@ -140,7 +142,7 @@ async function updateRecord(Record, Column){
             }
         }
         try{ return await runQuery(); } catch(e){console.log( e );}
-        finally{ console.log("database updated!"); pressAnyKeyFunc(); }
+        finally{ console.log("database updated!"); util.pressAnyKeyFunc(init); }
 }
 
 async function findTableColumns(entity){
@@ -156,25 +158,6 @@ let selectQuery = ` SELECT COLUMN_NAME
         }
     }
     try{ return await runQuery(); } catch(e){console.log( `Sorry had a problem with the database C!` );}
-}
-
-function arr_obj_To_arr(sourceArr){
-    let middleArr = sourceArr.map(obj => Object.values(obj));
-    let desArr = [].concat.apply([], middleArr.map(obj => Object.values(obj)));
-    return desArr;
-}  
-
-function pressAnyKeyFunc(){
-	pressAnyKey("Press any key to resolve, or CTRL+C to exit", {
-		ctrlC: "reject"
-		})
-		.then(() => {
-			init();
-		})
-		.catch(() => {
-            console.log('You pressed CTRL+C')
-            dbhandler.database.close(); 
-	  })
 }
 
 init();
