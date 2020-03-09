@@ -49,9 +49,9 @@ async function init(){
             ]);
             //console.log(inq_answers_UE_record);
 
-            employeeCols = await findTableColumns('employee'); // console.log(employeeCols);
-            destinationArr = util.arr_obj_To_arr(employeeCols); // console.log(destinationArr);
-            choicesArr = destinationArr.filter(function checkAdult(el, index) { return (index > 0 && index < destinationArr.length-2); });
+            employeeCols = await findTableColumns('employee'); //console.log(employeeCols);
+            destinationArr = util.arr_obj_To_arr(employeeCols); //console.log(destinationArr);
+            choicesArr = destinationArr.filter(function checkAdult(el, index) { return (index != 1 && index < destinationArr.length-2); });
             choicesArr.push("role name");
             choicesArr.push("manager name");
 
@@ -73,9 +73,9 @@ async function init(){
             ]);
             // console.log(inq_answers_UR_record);
             
-            roleCols = await findTableColumns('role'); // console.log(roleCols);
-            destinationArr = util.arr_obj_To_arr(roleCols); // console.log(destinationArr);
-            choicesArr = destinationArr.filter(function checkAdult(el, index) { return (index > 0 && index<destinationArr.length-1); });
+            roleCols = await findTableColumns('role'); //console.log(roleCols);
+            destinationArr = util.arr_obj_To_arr(roleCols); //console.log(destinationArr);
+            choicesArr = destinationArr.filter(function checkAdult(el, index) { return (index > 1); });
             choicesArr.push("department name");
 
             const inq_answers_UR_column = await inquirer.prompt([
@@ -131,9 +131,9 @@ async function view(entity, needReturn = false){
                             `select 
                             emp.id, emp.first_name, emp.last_name, rol.title, rol.salary, dep.name as department, CONCAT(manager.first_name, " ", manager.last_name) as manager
                             from employee as emp 
-                            left join role as rol on emp.role_id = rol.id
+                            inner join role as rol on emp.role_id = rol.id
                             inner join department as dep on rol.department_id = dep.id
-                            inner join employee as manager on manager.id = emp.manager_id`;
+                            left join employee as manager on manager.id = emp.manager_id`;
                 break;
         case "department" : 
                 selectQuery = (needReturn) ? `select name from department` : `select * from department`; 
