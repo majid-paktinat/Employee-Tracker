@@ -8,8 +8,6 @@ insert into employee(first_name, last_name, role_id, manager_id) values("Steve",
 insert into employee(first_name, last_name, role_id, manager_id) values("Melanie", "Gilbert", 22,39);
 
 
-
-
 insert into role(title, salary, department_id) values("Web Development - Team Lead", "100", 9);
 insert into role(title, salary, department_id) values("Business Analyst", "80", 10);
 insert into role(title, salary, department_id) values("Juior Developer", "70", 9);
