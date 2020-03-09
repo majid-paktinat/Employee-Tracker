@@ -13,6 +13,3 @@
 
 ## Exit:
 ![Screenshot](/Screenshots/Exit.jpg)
-
-## Results Validations(Errors Caugth):
-![Screenshot With Errors Caugth]()
